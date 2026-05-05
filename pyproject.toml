@@ -1,0 +1,58 @@
+[project]
+name = "stats-liff"
+version = "0.1.0"
+description = "統計検定2級 学習ログ LIFFアプリ - DE視点の自己分析プロジェクト"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["frontend/dist", ".venv", "venv"]
+
+[tool.ruff.lint]
+select = [
+  "E",   # pycodestyle errors
+  "W",   # pycodestyle warnings
+  "F",   # pyflakes
+  "I",   # isort
+  "B",   # flake8-bugbear
+  "UP",  # pyupgrade
+  "C4",  # flake8-comprehensions
+  "SIM", # flake8-simplify
+]
+ignore = [
+  "E501",  # line-too-long (rufftools formatに任せる)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"backend/tests/*" = ["B", "SIM"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+python_files = ["test_*.py"]
+addopts = [
+  "-v",
+  "--strict-markers",
+  "--tb=short",
+]
+markers = [
+  "integration: tests requiring real GCP credentials",
+  "slow: tests that take >1s",
+]
+
+[tool.coverage.run]
+source = ["backend"]
+omit = [
+  "backend/tests/*",
+  "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
