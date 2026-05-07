@@ -1,0 +1,34 @@
+name: 機能要望
+description: 新機能や改善提案
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: motivation
+    attributes:
+      label: 背景・動機
+      description: なぜこの機能が必要か
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 提案する解決策
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 代替案・トレードオフ
+      description: 他に考えられる選択肢、それを取らない理由
+
+  - type: dropdown
+    id: phase
+    attributes:
+      label: 想定フェーズ（ROADMAP参照）
+      options:
+        - Phase 1（合格まで）
+        - Phase 2（設計品質向上）
+        - Phase 3（汎化）
+        - 不明
