@@ -1,0 +1,6 @@
+project_id      = "your-gcp-project-id"
+region          = "asia-northeast1"
+bq_location     = "asia-northeast1"
+liff_channel_id = "0000000000"
+user_id_salt    = "REPLACE_WITH_RANDOM_HEX_32BYTES"
+allowed_origin  = "https://your-frontend-domain"

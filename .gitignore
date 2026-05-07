@@ -72,10 +72,8 @@ desktop.ini
 analysis/notebooks/*.ipynb
 !analysis/notebooks/*.example.ipynb
 
-# Data files (Exclude large raw data)
-data/*.csv
-data/*.json
-!data/seed/*.json  # シードデータ（初期データ）だけ許可する場合
-*.sqlite3
+# ---------- スクリーンショット（プライベート保管） ----------
+docs/screenshots/
 
-*.log
+# ---------- スクリーンショット（プライベート保管） ----------
+docs/screenshots/

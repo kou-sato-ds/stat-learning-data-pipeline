@@ -1,0 +1,49 @@
+# ============================================================
+# 統計検定2級 出題範囲シード（dim_topicの真の源）
+#
+# このファイルが SQL シードの単一ソース。weight・target_pass_rateを
+# 変更したい場合はここを更新し、`scripts/regen_topic_seed.py` で
+# sql/03_seed_dim_topic.sql を再生成する想定。
+#
+# weight        : 過去問の出題頻度（●=1.0, ○=0.5）の暫定スコア
+# target_pass_rate : 合格に必要な分野別正解率（0.0〜1.0）
+# ============================================================
+
+version: "2024.1"
+exam_name: "統計検定2級"
+
+topics:
+  - { id: T01, major: データソース,            minor: 身近な統計,             weight: 0.20, target_pass_rate: 0.60 }
+  - { id: T02, major: データの分布,            minor: データの分布の記述,     weight: 0.30, target_pass_rate: 0.65 }
+  - { id: T03, major: データの分布,            minor: データの分布の記述(発展), weight: 0.50, target_pass_rate: 0.65 }
+  - { id: T04, major: 1変数データ,             minor: 代表値と散布度,         weight: 0.80, target_pass_rate: 0.70 }
+  - { id: T05, major: 1変数データ,             minor: 散らばりの把握(箱ひげ図), weight: 0.60, target_pass_rate: 0.65 }
+  - { id: T06, major: 1変数データ,             minor: 散らばりの把握(その他), weight: 0.40, target_pass_rate: 0.60 }
+  - { id: T07, major: 1変数データ,             minor: 中心と散らばりの活用,   weight: 0.70, target_pass_rate: 0.65 }
+  - { id: T08, major: 2変数以上のデータ,       minor: 散布図と相関,           weight: 0.90, target_pass_rate: 0.70 }
+  - { id: T09, major: 2変数以上のデータ,       minor: カテゴリカルデータ,     weight: 0.40, target_pass_rate: 0.60 }
+  - { id: T10, major: データの活用,            minor: 単回帰と予測,           weight: 0.60, target_pass_rate: 0.65 }
+  - { id: T11, major: データの活用,            minor: 時系列データの処理,     weight: 0.50, target_pass_rate: 0.60 }
+  - { id: T12, major: 推測のためのデータ収集法, minor: 観察研究と実験研究,    weight: 0.40, target_pass_rate: 0.60 }
+  - { id: T13, major: 推測のためのデータ収集法, minor: 標本調査と無作為抽出,  weight: 0.50, target_pass_rate: 0.60 }
+  - { id: T14, major: 推測のためのデータ収集法, minor: 実験,                   weight: 0.30, target_pass_rate: 0.55 }
+  - { id: T15, major: 確率モデルの導入,        minor: 確率,                   weight: 0.80, target_pass_rate: 0.70 }
+  - { id: T16, major: 確率モデルの導入,        minor: 確率変数(変数型),       weight: 0.30, target_pass_rate: 0.60 }
+  - { id: T17, major: 確率モデルの導入,        minor: 確率変数(基本),         weight: 0.90, target_pass_rate: 0.70 }
+  - { id: T18, major: 確率モデルの導入,        minor: 確率変数(応用),         weight: 0.50, target_pass_rate: 0.60 }
+  - { id: T19, major: 確率モデルの導入,        minor: 確率分布,               weight: 0.80, target_pass_rate: 0.70 }
+  - { id: T20, major: 推測,                    minor: 標本分布(基本),         weight: 0.80, target_pass_rate: 0.70 }
+  - { id: T21, major: 推測,                    minor: 標本分布(応用),         weight: 0.40, target_pass_rate: 0.65 }
+  - { id: T22, major: 推測,                    minor: 標本分布(正規母集団),   weight: 1.00, target_pass_rate: 0.70 }
+  - { id: T23, major: 推測,                    minor: 推定(基本),             weight: 0.90, target_pass_rate: 0.70 }
+  - { id: T24, major: 推測,                    minor: 推定(1つの母集団),      weight: 0.70, target_pass_rate: 0.65 }
+  - { id: T25, major: 推測,                    minor: 推定(2つの母集団),      weight: 0.50, target_pass_rate: 0.60 }
+  - { id: T26, major: 推測,                    minor: 仮説検定(基本),         weight: 1.00, target_pass_rate: 0.70 }
+  - { id: T27, major: 推測,                    minor: 仮説検定(応用),         weight: 0.50, target_pass_rate: 0.60 }
+  - { id: T28, major: 推測,                    minor: 仮説検定(1つの母集団),  weight: 0.70, target_pass_rate: 0.65 }
+  - { id: T29, major: 推測,                    minor: 仮説検定(2つの母集団),  weight: 0.70, target_pass_rate: 0.65 }
+  - { id: T30, major: 推測,                    minor: 仮説検定(適合度/独立性), weight: 0.70, target_pass_rate: 0.65 }
+  - { id: T31, major: 線形モデル,              minor: 回帰分析(基本),         weight: 0.80, target_pass_rate: 0.70 }
+  - { id: T32, major: 線形モデル,              minor: 回帰分析(応用),         weight: 0.50, target_pass_rate: 0.60 }
+  - { id: T33, major: 線形モデル,              minor: 実験計画の概念の理解,   weight: 0.40, target_pass_rate: 0.60 }
+  - { id: T34, major: 活用,                    minor: 統計ソフトウェアの活用, weight: 0.40, target_pass_rate: 0.55 }

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>統計検定2級 学習ログ</title>
+  <link rel="stylesheet" href="./style.css" />
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body>
+  <header>
+    <h1>📊 学習ログ</h1>
+    <div id="user-info" class="muted">初期化中...</div>
+    <div id="error-banner" class="error hidden"></div>
+    <div id="info-banner" class="info hidden"></div>
+  </header>
+
+  <main>
+    <!-- セクション切替タブ -->
+    <nav class="tabs">
+      <button class="tab active" data-tab="answer">解答ログ</button>
+      <button class="tab" data-tab="shakyo">写経ログ</button>
+      <button class="tab" data-tab="status">現在地</button>
+    </nav>
+
+    <!-- 解答ログ入力 -->
+    <section id="tab-answer" class="tab-panel active">
+      <form id="answer-form">
+        <label>
+          問題ID
+          <input type="text" id="f-question-id" placeholder="例: 2024-Q15" required />
+        </label>
+        <label>
+          分野
+          <select id="f-topic-id" required></select>
+        </label>
+        <label>
+          正誤
+          <div class="radio-row">
+            <label><input type="radio" name="correct" value="true" required /> 正解</label>
+            <label><input type="radio" name="correct" value="false" /> 不正解</label>
+          </div>
+        </label>
+        <label>
+          自信度（1=勘 〜 5=完璧）
+          <input type="range" id="f-confidence" min="1" max="5" value="3" />
+          <span id="f-confidence-display">3</span>
+        </label>
+        <label>
+          解答時間（秒）<small id="timer-hint" class="muted"></small>
+          <input type="number" id="f-time-sec" min="0" max="7200" required />
+        </label>
+        <div class="button-row">
+          <button type="button" id="btn-start-timer">⏱️ 計測開始</button>
+          <button type="submit">送信</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- 写経ログ入力 -->
+    <section id="tab-shakyo" class="tab-panel">
+      <form id="shakyo-form">
+        <label>
+          分野
+          <select id="s-topic-id" required></select>
+        </label>
+        <label>
+          対象種別
+          <select id="s-target-type" required>
+            <option value="formula">公式</option>
+            <option value="code">コード</option>
+            <option value="proof">証明</option>
+          </select>
+        </label>
+        <label>
+          対象ID/ファイル名
+          <input type="text" id="s-target-ref" placeholder="例: F-22-CLT" required />
+        </label>
+        <label>
+          反復回数
+          <input type="number" id="s-rep" min="1" value="1" required />
+        </label>
+        <label>
+          所要時間（秒、任意）
+          <input type="number" id="s-duration" min="0" />
+        </label>
+        <button type="submit">送信</button>
+      </form>
+    </section>
+
+    <!-- 現在地（軽量サマリ） -->
+    <section id="tab-status" class="tab-panel">
+      <div class="status-card">
+        <div class="kpi">
+          <span class="kpi-label">未送信キュー</span>
+          <span class="kpi-value" id="queue-count">0</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-label">本日の解答</span>
+          <span class="kpi-value" id="today-count">-</span>
+        </div>
+        <button id="btn-flush-queue">未送信を再送信</button>
+        <p class="muted">※詳細分析はLooker Studioダッシュボードで確認してください。</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>

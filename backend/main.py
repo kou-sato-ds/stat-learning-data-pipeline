@@ -1,80 +1,212 @@
-﻿from fastapi import FastAPI, HTTPException
+"""
+Cloud Functions (Gen 2) - Stats LIFF Ingest API
+
+エンドポイント:
+  POST /ingestAnswer  解答ログ1件
+  POST /ingestShakyo  写経ログ1件
+
+認証:
+  Authorization: Bearer <LINE id_token>
+  - LINE Verify APIで検証 → audienceがLIFF_CHANNEL_IDに一致することを確認
+  - subject(LINE userId)をSHA256でハッシュ化してから保存
+
+依存:
+  google-cloud-bigquery, requests, functions-framework
+"""
+
 import os
-import pandas as pd
-from pydantic import BaseModel
-from typing import List
-from dotenv import load_dotenv
+import json
+import uuid
+import hashlib
+import logging
+from datetime import datetime, timezone
+from typing import Any, Dict, Optional, Tuple
 
-load_dotenv()
+import functions_framework
+import requests
+from google.cloud import bigquery
+from flask import Request, jsonify, make_response
 
-app = FastAPI(title="Stats Quiz API")
+# ---------- 設定 ----------
+PROJECT_ID         = os.environ["GCP_PROJECT"]
+BQ_DATASET_RAW     = os.environ.get("BQ_DATASET_RAW", "stats_raw")
+LIFF_CHANNEL_ID    = os.environ["LIFF_CHANNEL_ID"]    # LINE Login channel ID(audience)
+USER_ID_SALT       = os.environ.get("USER_ID_SALT", "")  # ハッシュ化ソルト
+ALLOWED_ORIGIN     = os.environ.get("ALLOWED_ORIGIN", "*")
 
-# --- データ定義（Pydantic） ---
-# APIが返すデータの構造を定義し、型安全性を確保
-class QuizItem(BaseModel):
-    id: int
-    context: str
-    question: str
-    choices: List[str]
-    answer: int
-    explanation: str
+LINE_VERIFY_URL    = "https://api.line.me/oauth2/v2.1/verify"
 
-# --- CSV読み込み関数 ---
-# 実装力を示すためのPandas操作
-def load_quiz_data():
-    csv_path = "data/quiz_data.csv"
+bq = bigquery.Client(project=PROJECT_ID)
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger(__name__)
 
-    if not os.path.exists(csv_path):
-        print(f"Error: {csv_path} not found.")
-        return []
+
+# ---------- ユーティリティ ----------
+def _cors_headers() -> Dict[str, str]:
+    return {
+        "Access-Control-Allow-Origin":  ALLOWED_ORIGIN,
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Authorization, Content-Type",
+        "Access-Control-Max-Age":       "3600",
+    }
+
+
+def _json_error(status: int, msg: str):
+    resp = make_response(jsonify({"error": msg}), status)
+    for k, v in _cors_headers().items():
+        resp.headers[k] = v
+    return resp
+
+
+def _json_ok(payload: Dict[str, Any]):
+    resp = make_response(jsonify(payload), 200)
+    for k, v in _cors_headers().items():
+        resp.headers[k] = v
+    return resp
+
+
+def _verify_id_token(id_token: str) -> Tuple[Optional[str], Optional[str]]:
+    """LINEのVerify APIでid_tokenを検証し (sub, error) を返す。"""
+    try:
+        r = requests.post(
+            LINE_VERIFY_URL,
+            data={"id_token": id_token, "client_id": LIFF_CHANNEL_ID},
+            timeout=5,
+        )
+        if r.status_code != 200:
+            return None, f"verify_failed: {r.status_code} {r.text[:200]}"
+        body = r.json()
+        if body.get("aud") != LIFF_CHANNEL_ID:
+            return None, "aud_mismatch"
+        sub = body.get("sub")
+        if not sub:
+            return None, "no_sub"
+        return sub, None
+    except Exception as e:
+        return None, f"verify_exception: {e}"
+
+
+def _hash_user_id(line_user_id: str) -> str:
+    h = hashlib.sha256()
+    h.update((USER_ID_SALT + line_user_id).encode("utf-8"))
+    return h.hexdigest()
+
+
+def _extract_token(req: Request) -> Optional[str]:
+    auth = req.headers.get("Authorization", "")
+    if auth.lower().startswith("bearer "):
+        return auth.split(" ", 1)[1].strip()
+    return None
+
+
+def _validate_answer_payload(p: Dict[str, Any]) -> Optional[str]:
+    required = ["question_id", "topic_id", "is_correct", "time_sec"]
+    for k in required:
+        if k not in p:
+            return f"missing field: {k}"
+    if not isinstance(p["time_sec"], int) or p["time_sec"] < 0 or p["time_sec"] > 7200:
+        return "time_sec out of range (0..7200)"
+    if not isinstance(p["is_correct"], bool):
+        return "is_correct must be bool"
+    if "confidence" in p and p["confidence"] is not None:
+        if not isinstance(p["confidence"], int) or not (1 <= p["confidence"] <= 5):
+            return "confidence must be int 1..5"
+    if not isinstance(p["topic_id"], str) or not p["topic_id"].startswith("T"):
+        return "topic_id must look like 'T22'"
+    return None
+
+
+def _validate_shakyo_payload(p: Dict[str, Any]) -> Optional[str]:
+    required = ["topic_id", "target_type", "target_ref", "repetition_count"]
+    for k in required:
+        if k not in p:
+            return f"missing field: {k}"
+    if p["target_type"] not in ("formula", "code", "proof"):
+        return "target_type must be one of formula/code/proof"
+    if not isinstance(p["repetition_count"], int) or p["repetition_count"] <= 0:
+        return "repetition_count must be positive int"
+    return None
+
+
+# ---------- ハンドラ本体 ----------
+def _handle(req: Request, kind: str):
+    if req.method == "OPTIONS":
+        resp = make_response("", 204)
+        for k, v in _cors_headers().items():
+            resp.headers[k] = v
+        return resp
+
+    if req.method != "POST":
+        return _json_error(405, "method not allowed")
+
+    token = _extract_token(req)
+    if not token:
+        return _json_error(401, "missing bearer token")
+
+    line_user_id, err = _verify_id_token(token)
+    if err or not line_user_id:
+        log.warning("token verify failed: %s", err)
+        return _json_error(401, f"invalid token: {err}")
+
+    user_id_hash = _hash_user_id(line_user_id)
 
     try:
-        # Pandasで一気に読み込む
-        df = pd.read_csv(csv_path)
+        payload = req.get_json(silent=True) or {}
+    except Exception:
+        return _json_error(400, "invalid json")
 
-        # リスト形式に変換（内包表記で実装力をアピール）
-        quizzes = []
-        for _, row in df.iterrows():
-            quizzes.append({
-                "id": int(row["id"]),
-                "context": str(row["context"]),
-                "question": str(row["question"]),
-                "choices": [str(row[f"choice_{i}"]) for i in range(1, 6)],
-                "answer": int(row["answer"]),
-                "explanation": str(row["explanation"])
-            })
-        return quizzes
-    except Exception as e:
-        print(f"Loading Error: {e}")
-        return []
+    if kind == "answer":
+        v = _validate_answer_payload(payload)
+        if v:
+            return _json_error(400, v)
+        row = {
+            "answer_id":   payload.get("answer_id") or str(uuid.uuid4()),
+            "user_id_hash": user_id_hash,
+            "question_id": payload["question_id"],
+            "topic_id":    payload["topic_id"],
+            "answered_at": payload.get("answered_at") or datetime.now(timezone.utc).isoformat(),
+            "is_correct":  payload["is_correct"],
+            "time_sec":    payload["time_sec"],
+            "confidence":  payload.get("confidence"),
+            "device":      payload.get("device"),
+            "session_id":  payload.get("session_id"),
+        }
+        table = f"{PROJECT_ID}.{BQ_DATASET_RAW}.answer_log"
+    elif kind == "shakyo":
+        v = _validate_shakyo_payload(payload)
+        if v:
+            return _json_error(400, v)
+        row = {
+            "shakyo_id":        payload.get("shakyo_id") or str(uuid.uuid4()),
+            "user_id_hash":     user_id_hash,
+            "topic_id":         payload["topic_id"],
+            "target_type":      payload["target_type"],
+            "target_ref":       payload["target_ref"],
+            "executed_at":      payload.get("executed_at") or datetime.now(timezone.utc).isoformat(),
+            "repetition_count": payload["repetition_count"],
+            "duration_sec":     payload.get("duration_sec"),
+        }
+        table = f"{PROJECT_ID}.{BQ_DATASET_RAW}.shakyo_log"
+    else:
+        return _json_error(400, "unknown kind")
 
-# --- エンドポイント ---
+    errors = bq.insert_rows_json(table, [row])
+    if errors:
+        log.error("bq insert errors: %s", errors)
+        return _json_error(500, "bq insert failed")
 
-@app.get("/")
-def read_root():
-    return {"status": "running", "environment": os.getenv("ENV", "development")}
+    return _json_ok({
+        "ok": True,
+        "id": row.get("answer_id") or row.get("shakyo_id"),
+    })
 
-# クイズ一覧を取得するエンドポイント
-@app.get("/quizzes", response_model=List[QuizItem])
-def get_all_quizzes():
-    data = load_quiz_data()
-    if not data:
-        raise HTTPException(status_code=404, detail="Quiz data not found")
-    return data
 
-# ランダムに1問取得するエンドポイント
-@app.get("/quizzes/random", response_model=QuizItem)
-def get_random_quiz():
-    data = load_quiz_data()
-    if not data:
-        raise HTTPException(status_code=404, detail="No quizzes available")
+# ---------- エントリーポイント ----------
+@functions_framework.http
+def ingestAnswer(request: Request):
+    return _handle(request, "answer")
 
-    # Pandasを使ってランダムにサンプリング（写経のメインどころ）
-    df = pd.DataFrame(data)
-    random_quiz = df.sample(n=1).to_dict(orient="records")[0]
-    return random_quiz
 
-if __name__ == "__main__":
-    import uvicorn
-    # 開発環境での実行
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+@functions_framework.http
+def ingestShakyo(request: Request):
+    return _handle(request, "shakyo")
