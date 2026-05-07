@@ -10,4 +10,4 @@ scipy==1.*
 numpy==1.*
 
 # 任意（SQLリンタ）
-sqlfluff==3.*
+sqlfluff==4.*
