@@ -1,7 +1,7 @@
 # 開発依存（CI/ローカル用）
 ruff==0.6.*
 pytest==8.*
-pytest-cov==5.*
+pytest-cov==7.*
 pytest-mock==3.*
 
 # 分析スクリプト用
