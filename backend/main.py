@@ -28,7 +28,7 @@ from google.cloud import bigquery
 
 # ---------- 設定 ----------
 PROJECT_ID = os.environ.get("GCP_PROJECT", "test-project")
-DATASET_RAW = os.environ.get("BQ_DATASET_RAW", "stats_raw")
+BQ_DATASET_RAW = os.environ.get("BQ_DATASET_RAW", "stats_raw")
 LIFF_CHANNEL_ID = os.environ.get("LIFF_CHANNEL_ID", "0000000000")
 USER_ID_SALT = os.environ.get("USER_ID_SALT", "test-salt-not-for-production")
 ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "*")
