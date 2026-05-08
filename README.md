@@ -4,7 +4,8 @@
 
 **統計検定2級の合格を目指して、自分の学習データ自体をデータパイプラインで扱う個人プロジェクト**
 
-[![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?logo=github-actions&logoColor=white)](.github/workflows/ci.yml)
+[![CI](https://github.com/kou-sato-ds/stat-learning-data-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/kou-sato-ds/stat-learning-data-pipeline/actions/workflows/ci.yml)
+[![Last commit](https://img.shields.io/github/last-commit/kou-sato-ds/stat-learning-data-pipeline)](https://github.com/kou-sato-ds/stat-learning-data-pipeline/commits/main)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![BigQuery](https://img.shields.io/badge/BigQuery-Star%20Schema-4285F4?logo=googlebigquery&logoColor=white)](sql/)
 [![LIFF](https://img.shields.io/badge/LINE-LIFF%20v2-00C300?logo=line&logoColor=white)](frontend/)
@@ -72,8 +73,6 @@ flowchart LR
 ---
 
 ## 🚀 どうやって動かすか（クイックスタート）
-
-このプロジェクトを再現したい人 / 自分が後日デプロイし直したい時のための手順:
 
 ```bash
 # 1. 環境変数の準備
