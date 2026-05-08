@@ -17,6 +17,7 @@ Cloud Functions (Gen 2) - Stats LIFF Ingest API
 import hashlib
 import logging
 import os
+import re
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -112,7 +113,7 @@ def _validate_answer_payload(p: dict[str, Any]) -> str | None:
         and (not isinstance(p["confidence"], int) or not (1 <= p["confidence"] <= 5))
     ):
         return "confidence must be int 1..5"
-    if not isinstance(p["topic_id"], str) or not p["topic_id"].startswith("T"):
+    if not isinstance(p["topic_id"], str) or not re.match(r"^T\d{2}$", p["topic_id"]):
         return "topic_id must look like 'T22'"
     return None
 
