@@ -72,9 +72,7 @@ def main() -> int:
     body = (
         "MERGE `${PROJECT_ID}.stats_mart.dim_topic` T\n"
         "USING (\n"
-        "  SELECT * FROM UNNEST([\n"
-        + ",\n".join(rows)
-        + "\n  ])\n"
+        "  SELECT * FROM UNNEST([\n" + ",\n".join(rows) + "\n  ])\n"
         ") S\n"
         "ON T.topic_id = S.topic_id\n"
         "WHEN MATCHED THEN UPDATE SET\n"

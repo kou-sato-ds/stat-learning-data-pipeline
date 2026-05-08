@@ -9,11 +9,11 @@ analysis/score_projection.py
 
 import argparse
 import sys
-from datetime import date
+
 import numpy as np
 import pandas as pd
-from scipy import stats
 from google.cloud import bigquery
+from scipy import stats
 
 
 def fetch_weekly(project: str, user_id_hash: str) -> pd.DataFrame:
@@ -47,7 +47,9 @@ def main() -> int:
         return 1
 
     # x: 経過週、y: 期待スコア
-    df["x"] = (pd.to_datetime(df["week_start"]) - pd.to_datetime(df["week_start"].min())).dt.days / 7.0
+    df["x"] = (
+        pd.to_datetime(df["week_start"]) - pd.to_datetime(df["week_start"].min())
+    ).dt.days / 7.0
     x = df["x"].values
     y = df["weekly_expected_score"].values
 
@@ -59,13 +61,17 @@ def main() -> int:
     # 予測の95%区間 (簡易: t * residual SE * sqrt(1 + 1/n + (x-x̄)^2/Sxx))
     residuals = y - (slope * x + intercept)
     s_err = np.sqrt(np.sum(residuals**2) / (n - 2)) if n > 2 else float("nan")
-    sxx = np.sum((x - x.mean())**2)
-    se_pred = s_err * np.sqrt(1 + 1/n + (exam_x - x.mean())**2 / sxx) if sxx > 0 else float("nan")
-    t_crit = stats.t.ppf(0.975, df=n-2) if n > 2 else 2.0
+    sxx = np.sum((x - x.mean()) ** 2)
+    se_pred = (
+        s_err * np.sqrt(1 + 1 / n + (exam_x - x.mean()) ** 2 / sxx) if sxx > 0 else float("nan")
+    )
+    t_crit = stats.t.ppf(0.975, df=n - 2) if n > 2 else 2.0
     pi = (y_hat - t_crit * se_pred, y_hat + t_crit * se_pred)
 
     print("=" * 60)
-    print(f"観測週数: {n} / 範囲: {df['week_start'].min().date()} 〜 {df['week_start'].max().date()}")
+    print(
+        f"観測週数: {n} / 範囲: {df['week_start'].min().date()} 〜 {df['week_start'].max().date()}"
+    )
     print(f"回帰式: score = {slope:.2f} * weeks + {intercept:.2f}")
     print(f"R^2 = {r**2:.3f}, p = {p:.4f}, 傾きSE = {se:.3f}")
     print(f"\n試験日({args.exam})の予測スコア: {y_hat:.1f}")

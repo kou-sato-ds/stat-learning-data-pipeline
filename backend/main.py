@@ -14,27 +14,26 @@ Cloud Functions (Gen 2) - Stats LIFF Ingest API
   google-cloud-bigquery, requests, functions-framework
 """
 
-import os
-import json
-import uuid
 import hashlib
 import logging
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional, Tuple
+import os
+import uuid
+from datetime import UTC, datetime
+from typing import Any
 
 import functions_framework
 import requests
-from google.cloud import bigquery
 from flask import Request, jsonify, make_response
+from google.cloud import bigquery
 
 # ---------- 設定 ----------
-PROJECT_ID         = os.environ["GCP_PROJECT"]
-BQ_DATASET_RAW     = os.environ.get("BQ_DATASET_RAW", "stats_raw")
-LIFF_CHANNEL_ID    = os.environ["LIFF_CHANNEL_ID"]    # LINE Login channel ID(audience)
-USER_ID_SALT       = os.environ.get("USER_ID_SALT", "")  # ハッシュ化ソルト
-ALLOWED_ORIGIN     = os.environ.get("ALLOWED_ORIGIN", "*")
+PROJECT_ID = os.environ["GCP_PROJECT"]
+BQ_DATASET_RAW = os.environ.get("BQ_DATASET_RAW", "stats_raw")
+LIFF_CHANNEL_ID = os.environ["LIFF_CHANNEL_ID"]  # LINE Login channel ID(audience)
+USER_ID_SALT = os.environ.get("USER_ID_SALT", "")  # ハッシュ化ソルト
+ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "*")
 
-LINE_VERIFY_URL    = "https://api.line.me/oauth2/v2.1/verify"
+LINE_VERIFY_URL = "https://api.line.me/oauth2/v2.1/verify"
 
 bq = bigquery.Client(project=PROJECT_ID)
 logging.basicConfig(level=logging.INFO)
@@ -42,12 +41,12 @@ log = logging.getLogger(__name__)
 
 
 # ---------- ユーティリティ ----------
-def _cors_headers() -> Dict[str, str]:
+def _cors_headers() -> dict[str, str]:
     return {
-        "Access-Control-Allow-Origin":  ALLOWED_ORIGIN,
+        "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
         "Access-Control-Allow-Methods": "POST, OPTIONS",
         "Access-Control-Allow-Headers": "Authorization, Content-Type",
-        "Access-Control-Max-Age":       "3600",
+        "Access-Control-Max-Age": "3600",
     }
 
 
@@ -58,14 +57,14 @@ def _json_error(status: int, msg: str):
     return resp
 
 
-def _json_ok(payload: Dict[str, Any]):
+def _json_ok(payload: dict[str, Any]):
     resp = make_response(jsonify(payload), 200)
     for k, v in _cors_headers().items():
         resp.headers[k] = v
     return resp
 
 
-def _verify_id_token(id_token: str) -> Tuple[Optional[str], Optional[str]]:
+def _verify_id_token(id_token: str) -> tuple[str | None, str | None]:
     """LINEのVerify APIでid_tokenを検証し (sub, error) を返す。"""
     try:
         r = requests.post(
@@ -92,14 +91,14 @@ def _hash_user_id(line_user_id: str) -> str:
     return h.hexdigest()
 
 
-def _extract_token(req: Request) -> Optional[str]:
+def _extract_token(req: Request) -> str | None:
     auth = req.headers.get("Authorization", "")
     if auth.lower().startswith("bearer "):
         return auth.split(" ", 1)[1].strip()
     return None
 
 
-def _validate_answer_payload(p: Dict[str, Any]) -> Optional[str]:
+def _validate_answer_payload(p: dict[str, Any]) -> str | None:
     required = ["question_id", "topic_id", "is_correct", "time_sec"]
     for k in required:
         if k not in p:
@@ -108,15 +107,18 @@ def _validate_answer_payload(p: Dict[str, Any]) -> Optional[str]:
         return "time_sec out of range (0..7200)"
     if not isinstance(p["is_correct"], bool):
         return "is_correct must be bool"
-    if "confidence" in p and p["confidence"] is not None:
-        if not isinstance(p["confidence"], int) or not (1 <= p["confidence"] <= 5):
-            return "confidence must be int 1..5"
+    if (
+        "confidence" in p
+        and p["confidence"] is not None
+        and (not isinstance(p["confidence"], int) or not (1 <= p["confidence"] <= 5))
+    ):
+        return "confidence must be int 1..5"
     if not isinstance(p["topic_id"], str) or not p["topic_id"].startswith("T"):
         return "topic_id must look like 'T22'"
     return None
 
 
-def _validate_shakyo_payload(p: Dict[str, Any]) -> Optional[str]:
+def _validate_shakyo_payload(p: dict[str, Any]) -> str | None:
     required = ["topic_id", "target_type", "target_ref", "repetition_count"]
     for k in required:
         if k not in p:
@@ -160,16 +162,16 @@ def _handle(req: Request, kind: str):
         if v:
             return _json_error(400, v)
         row = {
-            "answer_id":   payload.get("answer_id") or str(uuid.uuid4()),
+            "answer_id": payload.get("answer_id") or str(uuid.uuid4()),
             "user_id_hash": user_id_hash,
             "question_id": payload["question_id"],
-            "topic_id":    payload["topic_id"],
-            "answered_at": payload.get("answered_at") or datetime.now(timezone.utc).isoformat(),
-            "is_correct":  payload["is_correct"],
-            "time_sec":    payload["time_sec"],
-            "confidence":  payload.get("confidence"),
-            "device":      payload.get("device"),
-            "session_id":  payload.get("session_id"),
+            "topic_id": payload["topic_id"],
+            "answered_at": payload.get("answered_at") or datetime.now(UTC).isoformat(),
+            "is_correct": payload["is_correct"],
+            "time_sec": payload["time_sec"],
+            "confidence": payload.get("confidence"),
+            "device": payload.get("device"),
+            "session_id": payload.get("session_id"),
         }
         table = f"{PROJECT_ID}.{BQ_DATASET_RAW}.answer_log"
     elif kind == "shakyo":
@@ -177,14 +179,14 @@ def _handle(req: Request, kind: str):
         if v:
             return _json_error(400, v)
         row = {
-            "shakyo_id":        payload.get("shakyo_id") or str(uuid.uuid4()),
-            "user_id_hash":     user_id_hash,
-            "topic_id":         payload["topic_id"],
-            "target_type":      payload["target_type"],
-            "target_ref":       payload["target_ref"],
-            "executed_at":      payload.get("executed_at") or datetime.now(timezone.utc).isoformat(),
+            "shakyo_id": payload.get("shakyo_id") or str(uuid.uuid4()),
+            "user_id_hash": user_id_hash,
+            "topic_id": payload["topic_id"],
+            "target_type": payload["target_type"],
+            "target_ref": payload["target_ref"],
+            "executed_at": payload.get("executed_at") or datetime.now(UTC).isoformat(),
             "repetition_count": payload["repetition_count"],
-            "duration_sec":     payload.get("duration_sec"),
+            "duration_sec": payload.get("duration_sec"),
         }
         table = f"{PROJECT_ID}.{BQ_DATASET_RAW}.shakyo_log"
     else:
@@ -195,10 +197,12 @@ def _handle(req: Request, kind: str):
         log.error("bq insert errors: %s", errors)
         return _json_error(500, "bq insert failed")
 
-    return _json_ok({
-        "ok": True,
-        "id": row.get("answer_id") or row.get("shakyo_id"),
-    })
+    return _json_ok(
+        {
+            "ok": True,
+            "id": row.get("answer_id") or row.get("shakyo_id"),
+        }
+    )
 
 
 # ---------- エントリーポイント ----------

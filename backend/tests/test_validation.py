@@ -1,7 +1,6 @@
 """ペイロードバリデーションのテスト"""
 
 import pytest
-
 from main import _validate_answer_payload, _validate_shakyo_payload
 
 

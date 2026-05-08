@@ -1,7 +1,5 @@
 """ハッシュ化ロジックのテスト"""
 
-import os
-
 from main import _hash_user_id
 
 
@@ -36,6 +34,7 @@ def test_hash_salt_changes_output(monkeypatch):
     import importlib
 
     import main as m
+
     importlib.reload(m)
     h2 = m._hash_user_id("U1")
     assert h1 != h2

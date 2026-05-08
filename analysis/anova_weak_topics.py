@@ -10,20 +10,21 @@ analysis/anova_weak_topics.py
 
 import argparse
 import sys
-import pandas as pd
+
 import numpy as np
-from scipy import stats
+import pandas as pd
 from google.cloud import bigquery
+from scipy import stats
 
 
 def fetch(project: str, user_id_hash: str) -> pd.DataFrame:
     bq = bigquery.Client(project=project)
-    sql = """
+    sql = f"""
       SELECT topic_id, time_sec, is_correct
-      FROM `{p}.stats_mart.fact_answer`
+      FROM `{project}.stats_mart.fact_answer`
       WHERE user_id_hash = @uid
         AND time_outlier_flag = FALSE
-    """.format(p=project)
+    """
     job = bq.query(
         sql,
         job_config=bigquery.QueryJobConfig(
@@ -43,8 +44,11 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--project", required=True)
     ap.add_argument("--user-id-hash", required=True)
-    ap.add_argument("--correct-only", action="store_true",
-                    help="正解のみ対象（不正解は思考時間のシグナルが乱れるため）")
+    ap.add_argument(
+        "--correct-only",
+        action="store_true",
+        help="正解のみ対象（不正解は思考時間のシグナルが乱れるため）",
+    )
     args = ap.parse_args()
 
     df = fetch(args.project, args.user_id_hash)
@@ -68,7 +72,7 @@ def main() -> int:
 
     # 等分散性
     levene = stats.levene(*groups)
-    f_one  = stats.f_oneway(*groups)
+    f_one = stats.f_oneway(*groups)
 
     print("=" * 60)
     print(f"対象分野数: {len(groups)} / 全データ: {sum(len(g) for g in groups)}件")
@@ -82,14 +86,16 @@ def main() -> int:
     # 分野ごとの統計を変動係数でソート
     print("\n--- 分野別ランキング (変動係数CV降順) ---")
     rows = []
-    for tid, g in zip(labels, groups):
-        rows.append({
-            "topic_id":     tid,
-            "n":            len(g),
-            "mean_sec":     round(np.mean(g), 1),
-            "sd_sec":       round(np.std(g, ddof=1), 1),
-            "cv":           round(np.std(g, ddof=1) / np.mean(g), 3),
-        })
+    for tid, g in zip(labels, groups, strict=False):
+        rows.append(
+            {
+                "topic_id": tid,
+                "n": len(g),
+                "mean_sec": round(np.mean(g), 1),
+                "sd_sec": round(np.std(g, ddof=1), 1),
+                "cv": round(np.std(g, ddof=1) / np.mean(g), 3),
+            }
+        )
     table = pd.DataFrame(rows).sort_values("cv", ascending=False)
     print(table.to_string(index=False))
     return 0

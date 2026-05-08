@@ -31,8 +31,10 @@ def mock_bq(monkeypatch):
 @pytest.fixture
 def mock_verify_ok(monkeypatch):
     """LINE Verify APIを成功でモック"""
+
     def _verify(*args, **kwargs):
         return ("U1234567890abcdef", None)
+
     monkeypatch.setattr("main._verify_id_token", _verify)
     return _verify
 
@@ -41,5 +43,6 @@ def mock_verify_ok(monkeypatch):
 def mock_verify_fail(monkeypatch):
     def _verify(*args, **kwargs):
         return (None, "invalid_token")
+
     monkeypatch.setattr("main._verify_id_token", _verify)
     return _verify
