@@ -27,12 +27,11 @@ from flask import Request, jsonify, make_response
 from google.cloud import bigquery
 
 # ---------- 設定 ----------
-PROJECT_ID = os.environ["GCP_PROJECT"]
-BQ_DATASET_RAW = os.environ.get("BQ_DATASET_RAW", "stats_raw")
-LIFF_CHANNEL_ID = os.environ["LIFF_CHANNEL_ID"]  # LINE Login channel ID(audience)
-USER_ID_SALT = os.environ.get("USER_ID_SALT", "")  # ハッシュ化ソルト
+PROJECT_ID = os.environ.get("GCP_PROJECT", "test-project")
+DATASET_RAW = os.environ.get("BQ_DATASET_RAW", "stats_raw")
+LIFF_CHANNEL_ID = os.environ.get("LIFF_CHANNEL_ID", "0000000000")
+USER_ID_SALT = os.environ.get("USER_ID_SALT", "test-salt-not-for-production")
 ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "*")
-
 LINE_VERIFY_URL = "https://api.line.me/oauth2/v2.1/verify"
 
 bq = bigquery.Client(project=PROJECT_ID)
